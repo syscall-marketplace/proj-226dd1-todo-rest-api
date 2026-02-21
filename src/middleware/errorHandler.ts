@@ -17,15 +17,18 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 }
 
 /**
- * Wraps a route handler with try-catch so unhandled errors are forwarded
- * to the Express error-handling middleware via next(error).
+ * Wraps a route handler with try-catch so unhandled errors (sync or async)
+ * are forwarded to the Express error-handling middleware via next(error).
  */
 export function wrapHandler(
-  handler: (req: Request, res: Response, next: NextFunction) => void,
+  handler: (req: Request, res: Response, next: NextFunction) => void | Promise<void>,
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      handler(req, res, next);
+      const result = handler(req, res, next);
+      if (result && typeof (result as Promise<void>).catch === 'function') {
+        (result as Promise<void>).catch(next);
+      }
     } catch (error) {
       next(error);
     }
